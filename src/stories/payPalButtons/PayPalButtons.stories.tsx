@@ -3,7 +3,12 @@ import { action } from "@storybook/addon-actions";
 
 import { usePayPalScriptReducer, DISPATCH_ACTION } from "../../index";
 import { PayPalScriptProvider, PayPalButtons, FUNDING } from "../../index";
-import { getOptionsFromQueryString, generateRandomString } from "../utils";
+import {
+    getOptionsFromQueryString,
+    generateRandomString,
+    CREATE_ORDER_URL,
+    CAPTURE_ORDER_URL,
+} from "../utils";
 import {
     COMPONENT_PROPS_CATEGORY,
     COMPONENT_EVENTS,
@@ -23,8 +28,6 @@ import { getDefaultCode, getDonateCode } from "./code";
 import type { FC, ReactElement } from "react";
 import type {
     PayPalScriptOptions,
-    CreateOrderActions,
-    OnApproveActions,
     PayPalButtonsComponentOptions,
     FUNDING_SOURCE,
 } from "@paypal/paypal-js";
@@ -171,6 +174,45 @@ export const Default: FC<StoryProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [showSpinner]);
 
+    function createOrder() {
+        return fetch(CREATE_ORDER_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            // use the "body" param to optionally pass additional order information
+            // like product ids and quantities
+            body: JSON.stringify({
+                cart: [
+                    {
+                        sku: "1blwyeo8",
+                        quantity: 2,
+                    },
+                ],
+            }),
+        })
+            .then((response) => response.json())
+            .then((order) => {
+                action(ORDER_ID)(order.id);
+                return order.id;
+            });
+    }
+    function onApprove(data: { orderID: string }) {
+        return fetch(CAPTURE_ORDER_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                orderID: data.orderID,
+            }),
+        })
+            .then((response) => response.json())
+            .then((orderData) => {
+                action(APPROVE)(orderData);
+            });
+    }
+
     return (
         <>
             {showSpinner && <LoadingSpinner />}
@@ -179,35 +221,8 @@ export const Default: FC<StoryProps> = ({
                 disabled={disabled}
                 fundingSource={fundingSource}
                 forceReRender={[style, currency, amount]}
-                createOrder={(
-                    data: Record<string, unknown>,
-                    actions: CreateOrderActions
-                ) => {
-                    return actions.order
-                        .create({
-                            purchase_units: [
-                                {
-                                    amount: {
-                                        currency_code: currency,
-                                        value: amount,
-                                    },
-                                },
-                            ],
-                        })
-                        .then((orderId) => {
-                            action(ORDER_ID)(orderId);
-                            return orderId;
-                        });
-                }}
-                onApprove={(_, actions: OnApproveActions) => {
-                    if (!actions.order) {
-                        action(ERROR)(ORDER_INSTANCE_ERROR);
-                        return Promise.reject(ORDER_INSTANCE_ERROR);
-                    }
-                    return actions.order.capture().then(function (details) {
-                        action(APPROVE)(details);
-                    });
-                }}
+                createOrder={createOrder}
+                onApprove={onApprove}
                 {...defaultProps}
             >
                 <InEligibleError />

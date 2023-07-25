@@ -10,6 +10,9 @@ type TokenResponse = {
 } & { success?: boolean };
 
 export const FLY_SERVER = "https://react-paypal-js-storybook.fly.dev";
+export const CREATE_ORDER_URL = `${FLY_SERVER}/api/paypal/create-order`;
+export const CAPTURE_ORDER_URL = `${FLY_SERVER}/api/paypal/capture-order`;
+
 const CLIENT_TOKEN_URL = `${FLY_SERVER}/api/braintree/generate-client-token`;
 const SALE_URL = `${FLY_SERVER}/api/braintree/sale`;
 const allowedSDKQueryParams = Object.keys(SDK_QUERY_KEYS).map(

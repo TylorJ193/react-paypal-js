@@ -1,4 +1,8 @@
-import { generateFundingSource } from "../utils";
+import {
+    generateFundingSource,
+    CREATE_ORDER_URL,
+    CAPTURE_ORDER_URL,
+} from "../utils";
 
 import type { Args } from "@storybook/addons/dist/ts3.9/types";
 
@@ -43,6 +47,47 @@ const amount = "${args.amount}";
 const currency = "${args.currency}";
 const style = ${JSON.stringify(args.style)};
 
+function createOrder() {
+    // replace this url with your server
+    return fetch("${CREATE_ORDER_URL}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        // use the "body" param to optionally pass additional order information
+        // like product ids and quantities
+        body: JSON.stringify({
+            cart: [
+                {
+                    sku: "1blwyeo8",
+                    quantity: 2,
+                },
+            ],
+        }),
+    })
+        .then((response) => response.json())
+        .then((order) => {
+            // Your code here after create the order
+            return order.id;
+        });
+}
+function onApprove(data) {
+    // replace this url with your server
+    return fetch("${CAPTURE_ORDER_URL}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            orderID: data.orderID,
+        }),
+    })
+        .then((response) => response.json())
+        .then((orderData) => {
+            // Your code here after capture the order
+        });
+}
+
 // Custom component to wrap the PayPalButtons and handle currency changes
 const ButtonWrapper = ({ currency, showSpinner }) => {
     ${buttonWrapperEffect("currency, showSpinner")}
@@ -54,28 +99,8 @@ const ButtonWrapper = ({ currency, showSpinner }) => {
                 disabled={${args.disabled}}
                 forceReRender={[amount, currency, style]}
                 ${generateFundingSource(args.fundingSource as string)}
-                createOrder={(data, actions) => {
-                    return actions.order
-                        .create({
-                            purchase_units: [
-                                {
-                                    amount: {
-                                        currency_code: currency,
-                                        value: amount,
-                                    },
-                                },
-                            ],
-                        })
-                        .then((orderId) => {
-                            // Your code here after create the order
-                            return orderId;
-                        });
-                }}
-                onApprove={function (data, actions) {
-                    return actions.order.capture().then(function () {
-                        // Your code here after capture the order
-                    });
-                }}
+                createOrder={createOrder}
+                onApprove={onApprove}
             />
         </>
     );
